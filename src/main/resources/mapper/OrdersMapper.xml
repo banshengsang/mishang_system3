@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mishang.mishang_system.mapper.OrdersMapper">
+
+    <!--
+        查询一批客户，每个客户只拿到最新一笔订单
+        参数customerIds：客户id集合
+        返回值：Orders订单实体
+    -->
+    <select id="getLatestOrdersByCustomerIds" resultType="com.mishang.mishang_system.entity.Orders">
+        SELECT*FROM(
+        /*查询订单全部字段*/
+        SELECT*,
+        /*窗口函数 按照客户id分组，组内按订单时间倒叙排序。
+        增加行号rn，并且同一个客户订单最新的一条rn=1*/
+        ROW_NUMBER() OVER(PARTITION BY customer_id ORDER BY order_time DESC) AS rn
+        FROM orders
+        /*只查询传入的这批客户的订单*/
+        WHERE customer_id IN
+        <!-- foreach循环拼接多个客户id -->
+        <foreach collection="customerIds" item="cid" open="(" separator="," close=")">
+            #{cid}
+        </foreach>
+        ) t /*只保留每个客户rn=1，也就是最新的那条订单*/
+        WHERE t.rn = 1
+    </select>
+</mapper>
